@@ -36,7 +36,7 @@ jobs:
           python download_zip.py
 
     - name: Upload ZIP artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: valmikinagar-roll
           path: valmikinagar.zip
