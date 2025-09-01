@@ -1,42 +1,33 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
-name: Python application
+name: Download Valmikinagar Roll via API
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: read
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # Every day at 02:00 UTC
 
 jobs:
-  build:
-
+  download:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Install Playwright and dependencies
-      run: |
-          pip install --upgrade pip
-          pip install playwright
-          # installs browsers + necessary libs on Ubuntu
-          playwright install --with-deps
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    - name: Run download script
-      run: |
-          python Parser.py
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
-    - name: Upload ZIP artifact
-      uses: actions/upload-artifact@v4
-      with:
+      - name: Download roll ZIP via API
+        run: python download_zip_api.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
           name: valmikinagar-roll
           path: valmikinagar.zip
