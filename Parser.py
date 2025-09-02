@@ -33,11 +33,13 @@ def download_valmikinagar_zip(output_path: Path):
                     break
 
             # Select State
-            
-            page.selectpage.wait_for_selector("select#selectStateAdd", state="attached", timeout=300_000)
+        
+         
+            print("🔍 Waiting for State dropdown...")
+            page.wait_for_selector("select#selectStateAdd", state="attached", timeout=300_000)
+            print("✅ State dropdown found, selecting Bihar...")
             page.select_option("select#selectStateAdd", label=STATE_LABEL)
             page.wait_for_timeout(2000)
-
             # Select District
             page.wait_for_selector("select#selectDistrictAdd option:not([value=''])", timeout=200_000)
             page.select_option("select#selectDistrictAdd", label=DISTRICT_LABEL)
