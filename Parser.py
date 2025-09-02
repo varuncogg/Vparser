@@ -21,7 +21,7 @@ def download_zip(output_path: Path):
 
         try:
             print(f"🌐 Opening {TARGET_URL}")
-            page.goto(TARGET_URL, wait_until="networkidle", timeout=120_000)
+            page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=120_000)
 
             # # Wait for the table and the correct row
             # selector = f"tr:has-text('{AC_LABEL}') button:has-text('Download')"
@@ -32,18 +32,17 @@ def download_zip(output_path: Path):
             #     page.click(selector)
             try:
                 # start listening for a download
-                with page.expect_download(timeout=120_000) as dl_info:
+                with page.expect_download(timeout=180_000) as dl_info:
                     # this triggers the JS click-handler you wrote
                     page.click("button.btn-download")
                 download = dl_info.value
                 path = Path(download.path())
-                temp_path = download.path()
                 print("✅ Saved to", path.resolve())
             except TimeoutError:
                 print("❌ Download never started or timed out")
 
             # download = download_info.value
-            # temp_path = download.path()
+             temp_path = download.path()
 
             # Monitor file size until stable
             last_size = -1
