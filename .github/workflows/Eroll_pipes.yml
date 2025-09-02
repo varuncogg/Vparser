@@ -1,4 +1,4 @@
-name: Download  Roll via API
+name: Download Roll via API
 
 on:
   push:
@@ -7,40 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  download:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests playwright chromium 
-
-      - name: Download roll ZIP via API
-        run: python Parser.py
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-            name: screenshots
-            path: screenshots
-      name: Playwright Screenshot Capture
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  run-playwright:
+  download-roll:
     runs-on: ubuntu-latest
 
     steps:
@@ -55,14 +22,22 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install playwright
+          pip install requests playwright
           playwright install
 
-      - name: Run script
-        run: python your_script.py
+      - name: Run Parser script
+        run: python Parser.py
 
-      - name: Upload screenshots
+      - name: Upload screenshots on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-screenshots
+          name: screenshots
+          path: screenshots/
+
+      - name: Upload screenshots on success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
           path: screenshots/
