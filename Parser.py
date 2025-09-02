@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from pathlib import Path
-from playwright.sync_api import sync_playwright, TimeoutError
 import os
 import time
+from pathlib import Path
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 TARGET_URL = "https://www.eci.gov.in/eci-backend/public/ER/s04/SIR/roll.html"
 AC_LABEL = "VALMIKINAGAR"  # Change to match the row text exactly
@@ -21,30 +21,23 @@ def download_zip(output_path: Path):
 
         try:
             print(f"🌐 Opening {TARGET_URL}")
-            page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=120_000)
+            page.goto(TARGET_URL, wait_until="networkidle", timeout=120_000)
 
-            # # Wait for the table and the correct row
-            # selector = f"tr:has-text('{AC_LABEL}') button:has-text('Download')"
-            # page.wait_for_selector(selector, timeout=180_000)
-
-            # print(f"📥 Clicking download for {AC_LABEL}...")
-            # with page.expect_download(timeout=MAX_WAIT * 1000) as download_info:
-            #     page.click(selector)
+            # Optional: Wait for specific row if needed
+            selector = f"tr:has-text('{AC_LABEL}') button:has-text('Download')"
             try:
-                # start listening for a download
+                page.wait_for_selector(selector, timeout=180_000)
+                print(f"📥 Clicking download for {AC_LABEL}...")
+                with page.expect_download(timeout=MAX_WAIT * 1000) as download_info:
+                    page.click(selector)
+                download = download_info.value
+            except PlaywrightTimeoutError:
+                print(f"⚠️ Could not find selector for {AC_LABEL}, falling back to generic button.")
                 with page.expect_download(timeout=180_000) as dl_info:
-                    # this triggers the JS click-handler you wrote
                     page.click("button.btn-download")
                 download = dl_info.value
-                path = Path(download.path())
-                print("✅ Saved to", path.resolve())
-            except TimeoutError:
-                print("❌ Download never started or timed out")
 
-            # download = download_info.value
-             temp_path = download.path()
-
-            # Monitor file size until stable
+            temp_path = download.path()
             last_size = -1
             stable_count = 0
             start_time = time.time()
@@ -64,25 +57,21 @@ def download_zip(output_path: Path):
                         stable_count = 0
                     last_size = size
 
-                    # If size hasn't changed for 3 intervals, assume complete
                     if stable_count >= 3:
                         break
                 else:
                     print("Waiting for file to appear...")
 
                 if time.time() - start_time > MAX_WAIT:
-                    raise TimeoutError("Download timed out.")
+                    raise PlaywrightTimeoutError("Download timed out.")
 
                 time.sleep(PROGRESS_INTERVAL)
 
-            # Save final file
             download.save_as(str(output_path))
             print(f"✅ Download complete: {output_path.resolve()}")
-
-            # Final screenshot
             page.screenshot(path=str(SCREENSHOT_DIR / "final_success.png"), full_page=True)
 
-        except TimeoutError as e:
+        except PlaywrightTimeoutError as e:
             page.screenshot(path=str(SCREENSHOT_DIR / "debug_failure.png"), full_page=True)
             print(f"❌ Timeout: {e}")
             print(f"📸 Failure screenshot saved in {SCREENSHOT_DIR}")
