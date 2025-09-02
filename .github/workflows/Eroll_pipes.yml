@@ -27,7 +27,7 @@ jobs:
       - name: Download roll ZIP via API
         run: python Parser.py
       - name: Upload screenshots
-        uses: actions/upload-artifact@4
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
             name: cypress-snapshots
