@@ -24,7 +24,7 @@ jobs:
           pip install requests
 
       - name: Download roll ZIP via API
-        run: python download_zip_api.py
+        run: python Parser.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
