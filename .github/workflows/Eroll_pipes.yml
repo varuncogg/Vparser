@@ -1,4 +1,4 @@
-name: Download Valmikinagar Roll via API
+name: Download  Roll via API
 
 on:
   push:
@@ -32,9 +32,37 @@ jobs:
         with:
             name: screenshots
             path: screenshots
-      # - name: Upload artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: valmikinagar-roll
-      #     path: valmikinagar.zip
-      
+      name: Playwright Screenshot Capture
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-playwright:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install
+
+      - name: Run script
+        run: python your_script.py
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: screenshots/
