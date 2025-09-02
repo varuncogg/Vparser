@@ -33,21 +33,23 @@ def download_valmikinagar_zip(output_path: Path):
                     break
 
             # Select State
+            
+            page.selectpage.wait_for_selector("select#selectStateAdd", state="attached", timeout=300_000)
             page.select_option("select#selectStateAdd", label=STATE_LABEL)
             page.wait_for_timeout(2000)
 
             # Select District
-            page.wait_for_selector("select#selectDistrictAdd option:not([value=''])", timeout=20_000)
+            page.wait_for_selector("select#selectDistrictAdd option:not([value=''])", timeout=200_000)
             page.select_option("select#selectDistrictAdd", label=DISTRICT_LABEL)
             page.wait_for_timeout(2000)
 
             # Select AC
-            page.wait_for_selector("select#selectACAdd option:not([value=''])", timeout=20_000)
+            page.wait_for_selector("select#selectACAdd option:not([value=''])", timeout=200_000)
             page.select_option("select#selectACAdd", label=AC_LABEL)
             page.wait_for_timeout(2000)
 
             # Wait for download link
-            page.wait_for_selector("table#tblResult a:has-text('Download')", timeout=30_000)
+            page.wait_for_selector("table#tblResult a:has-text('Download')", timeout=300_000)
             with page.expect_download(timeout=60_000) as download_info:
                 page.click("table#tblResult a:has-text('Download')")
             download = download_info.value
