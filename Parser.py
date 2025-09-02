@@ -1,56 +1,67 @@
 #!/usr/bin/env python3
-import requests
 from pathlib import Path
+from playwright.sync_api import sync_playwright, TimeoutError
 
-# Base API URL
-BASE_URL = "https://www.eci.gov.in/eci-backend/public/ER/s04/SIR"
+TARGET_URL = "https://www.eci.gov.in/eci-backend/public/ER/s04/SIR/roll.html"
+STATE_LABEL = "Bihar"
+DISTRICT_LABEL = "West Champaran"
+AC_LABEL = "Valmikinagar"
+OUTPUT_ZIP = "valmikinagar.zip"
 
-def get_states():
-    resp = requests.get(f"{BASE_URL}/state")
-    resp.raise_for_status()
-    return resp.json()
+def download_valmikinagar_zip(output_path: Path):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(channel="chrome", headless=True, slow_mo=50)
+        context = browser.new_context(
+            accept_downloads=True,
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        )
+        page = context.new_page()
 
-def get_districts(state_id):
-    resp = requests.get(f"{BASE_URL}/district", params={"stateId": state_id})
-    resp.raise_for_status()
-    return resp.json()
+        try:
+            page.goto(TARGET_URL, wait_until="networkidle", timeout=120_000)
+            page.wait_for_timeout(3000)
 
-def get_acs(state_id, district_id):
-    resp = requests.get(f"{BASE_URL}/AC", params={
-        "stateId": state_id,
-        "districtId": district_id
-    })
-    resp.raise_for_status()
-    return resp.json()
+            # Handle cookie banner if present
+            for sel in ["button:has-text('Accept')", "button:has-text('OK')"]:
+                if page.locator(sel).first.is_visible(timeout=2000):
+                    page.click(sel)
+                    page.wait_for_timeout(1000)
+                    break
 
-def download_roll(state_id, district_id, ac_no, output_path: Path):
-    params = {"stateId": state_id, "districtId": district_id, "acNo": ac_no}
-    resp = requests.get(f"{BASE_URL}/roll", params=params, stream=True)
-    resp.raise_for_status()
-    with open(output_path, "wb") as f:
-        for chunk in resp.iter_content(8192):
-            f.write(chunk)
-    print(f"✅ Saved ZIP to {output_path.resolve()}")
+            # Select State
+            page.select_option("select#selectStateAdd", label=STATE_LABEL)
+            page.wait_for_timeout(2000)
+
+            # Select District
+            page.wait_for_selector("select#selectDistrictAdd option:not([value=''])", timeout=20_000)
+            page.select_option("select#selectDistrictAdd", label=DISTRICT_LABEL)
+            page.wait_for_timeout(2000)
+
+            # Select AC
+            page.wait_for_selector("select#selectACAdd option:not([value=''])", timeout=20_000)
+            page.select_option("select#selectACAdd", label=AC_LABEL)
+            page.wait_for_timeout(2000)
+
+            # Wait for download link
+            page.wait_for_selector("table#tblResult a:has-text('Download')", timeout=30_000)
+            with page.expect_download(timeout=60_000) as download_info:
+                page.click("table#tblResult a:has-text('Download')")
+            download = download_info.value
+            download.save_as(str(output_path))
+
+            print(f"✅ Downloaded: {output_path.resolve()}")
+
+        except TimeoutError as e:
+            page.screenshot(path="debug_failure.png", full_page=True)
+            print(f"❌ Timeout: {e}")
+            print("📸 Screenshot saved as debug_failure.png")
+        finally:
+            context.close()
+            browser.close()
 
 if __name__ == "__main__":
-    out_file = Path("valmikinagar.zip")
-
-    # Labels you want
-    STATE_LABEL    = "Bihar"
-    DISTRICT_LABEL = "West Champaran"
-    AC_LABEL       = "Valmikinagar"
-
-    # 1. Pick State
-    states = get_states()
-    state = next(s for s in states if s["stateName"] == STATE_LABEL)
-
-    # 2. Pick District
-    districts = get_districts(state["stateId"])
-    district = next(d for d in districts if d["districtName"] == DISTRICT_LABEL)
-
-    # 3. Pick Assembly Constituency
-    acs = get_acs(state["stateId"], district["districtId"])
-    ac = next(a for a in acs if a["acName"] == AC_LABEL)
-
-    # 4. Download ZIP
-    download_roll(state["stateId"], district["districtId"], ac["acNo"], out_file)
+    download_valmikinagar_zip(Path(OUTPUT_ZIP))
