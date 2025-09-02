@@ -24,8 +24,8 @@ def download_zip(output_path: Path):
             page.goto(TARGET_URL, wait_until="networkidle", timeout=120_000)
 
             # Wait for the table and the correct row
-            selector = f"tr:has-text('{AC_LABEL}') a:has-text('Download')"
-            page.wait_for_selector(selector, timeout=60_000)
+            selector = f"tr:has-text('{AC_LABEL}') button:has-text('Download')"
+            page.wait_for_selector(selector, timeout=180_000)
 
             print(f"📥 Clicking download for {AC_LABEL}...")
             with page.expect_download(timeout=MAX_WAIT * 1000) as download_info:
