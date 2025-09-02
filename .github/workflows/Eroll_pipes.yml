@@ -1,9 +1,10 @@
 name: Download Valmikinagar Roll via API
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 2 * * *'  # Every day at 02:00 UTC
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   download:
