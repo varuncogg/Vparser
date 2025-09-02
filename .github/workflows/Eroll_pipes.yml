@@ -26,9 +26,15 @@ jobs:
 
       - name: Download roll ZIP via API
         run: python Parser.py
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload screenshots
+        uses: actions/upload-artifact@latest
+        if: failure()
         with:
-          name: valmikinagar-roll
-          path: valmikinagar.zip
+            name: cypress-snapshots
+            path: cypress/snapshots
+      # - name: Upload artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: valmikinagar-roll
+      #     path: valmikinagar.zip
+      
