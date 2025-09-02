@@ -30,8 +30,8 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-            name: cypress-snapshots
-            path: cypress/snapshots
+            name: screenshots
+            path: screenshots
       # - name: Upload artifact
       #   uses: actions/upload-artifact@v4
       #   with:
