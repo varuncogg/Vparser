@@ -14,7 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Check the url
-        run: curl -I https://www.eci.gov.in/eci-backend/public/ER/s04/SIR/roll.html
+        run: curl -I "https://www.eci.gov.in/eci-backend/public/ER/s04/SIR/roll.html" \
+             -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0 Safari/537.36" \
+             -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+             -H "Accept-Language: en-US,en;q=0.5" \
+             -e "https://www.eci.gov.in/"
 
       - name: Set up Python
         uses: actions/setup-python@v4
