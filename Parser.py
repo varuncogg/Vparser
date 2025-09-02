@@ -15,8 +15,15 @@ SCREENSHOT_DIR = Path("screenshots")
 def download_zip(output_path: Path):
     SCREENSHOT_DIR.mkdir(exist_ok=True)
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=True)
-        context = browser.new_context(accept_downloads=True)
+        browser = p.chromium.launch(channel="chrome", headless=False)
+        context = browser.new_context(accept_downloads=True,user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+               "AppleWebKit/537.36 (KHTML, like Gecko) "
+               "Chrome/116.0.0.0 Safari/537.36",
+                    viewport={"width": 1366, "height": 768},
+                    locale="en-US",
+                    geolocation={"latitude": 28.6139, "longitude": 77.2090},  # Example: Delhi
+                    permissions=["geolocation"]
+                    )
         page = context.new_page()
 
         try:
