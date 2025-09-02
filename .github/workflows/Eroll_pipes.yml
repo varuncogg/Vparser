@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Check the url
+        run: curl -I https://www.eci.gov.in/eci-backend/public/ER/s04/SIR/roll.html
 
       - name: Set up Python
         uses: actions/setup-python@v4
