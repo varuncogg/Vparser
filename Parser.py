@@ -1,71 +1,84 @@
 #!/usr/bin/env python3
 from pathlib import Path
 from playwright.sync_api import sync_playwright, TimeoutError
+import os
+import time
 
 TARGET_URL = "https://www.eci.gov.in/eci-backend/public/ER/s04/SIR/roll.html"
-STATE_LABEL = "Bihar"
-DISTRICT_LABEL = "West Champaran"
-AC_LABEL = "Valmikinagar"
+AC_LABEL = "VALMIKINAGAR"  # Change to match the row text exactly
 OUTPUT_ZIP = "valmikinagar.zip"
 
-def download_valmikinagar_zip(output_path: Path):
+PROGRESS_INTERVAL = 30  # seconds between progress logs/screenshots
+MAX_WAIT = 60 * 60       # 1 hour max wait
+SCREENSHOT_DIR = Path("screenshots")
+
+def download_zip(output_path: Path):
+    SCREENSHOT_DIR.mkdir(exist_ok=True)
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=True, slow_mo=50)
-        context = browser.new_context(
-            accept_downloads=True,
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            )
-        )
+        browser = p.chromium.launch(channel="chrome", headless=True)
+        context = browser.new_context(accept_downloads=True)
         page = context.new_page()
 
         try:
+            print(f"🌐 Opening {TARGET_URL}")
             page.goto(TARGET_URL, wait_until="networkidle", timeout=120_000)
-            page.wait_for_timeout(3000)
 
-            # Handle cookie banner if present
-            for sel in ["button:has-text('Accept')", "button:has-text('OK')"]:
-                if page.locator(sel).first.is_visible(timeout=2000):
-                    page.click(sel)
-                    page.wait_for_timeout(1000)
-                    break
+            # Wait for the table and the correct row
+            selector = f"tr:has-text('{AC_LABEL}') a:has-text('Download')"
+            page.wait_for_selector(selector, timeout=60_000)
 
-            # Select State
-        
-         
-            print("🔍 Waiting for State dropdown...")
-            page.wait_for_selector("select#selectStateAdd", state="attached", timeout=300_000)
-            print("✅ State dropdown found, selecting Bihar...")
-            page.select_option("select#selectStateAdd", label=STATE_LABEL)
-            page.wait_for_timeout(2000)
-            # Select District
-            page.wait_for_selector("select#selectDistrictAdd option:not([value=''])", timeout=200_000)
-            page.select_option("select#selectDistrictAdd", label=DISTRICT_LABEL)
-            page.wait_for_timeout(2000)
+            print(f"📥 Clicking download for {AC_LABEL}...")
+            with page.expect_download(timeout=MAX_WAIT * 1000) as download_info:
+                page.click(selector)
 
-            # Select AC
-            page.wait_for_selector("select#selectACAdd option:not([value=''])", timeout=200_000)
-            page.select_option("select#selectACAdd", label=AC_LABEL)
-            page.wait_for_timeout(2000)
-
-            # Wait for download link
-            page.wait_for_selector("table#tblResult a:has-text('Download')", timeout=300_000)
-            with page.expect_download(timeout=60_000) as download_info:
-                page.click("table#tblResult a:has-text('Download')")
             download = download_info.value
-            download.save_as(str(output_path))
+            temp_path = download.path()
 
-            print(f"✅ Downloaded: {output_path.resolve()}")
+            # Monitor file size until stable
+            last_size = -1
+            stable_count = 0
+            start_time = time.time()
+            iteration = 0
+
+            while True:
+                iteration += 1
+                screenshot_path = SCREENSHOT_DIR / f"progress_{iteration}.png"
+                page.screenshot(path=str(screenshot_path), full_page=True)
+
+                if os.path.exists(temp_path):
+                    size = os.path.getsize(temp_path)
+                    print(f"⏳ Downloading... {size / (1024*1024):.2f} MB")
+                    if size == last_size:
+                        stable_count += 1
+                    else:
+                        stable_count = 0
+                    last_size = size
+
+                    # If size hasn't changed for 3 intervals, assume complete
+                    if stable_count >= 3:
+                        break
+                else:
+                    print("Waiting for file to appear...")
+
+                if time.time() - start_time > MAX_WAIT:
+                    raise TimeoutError("Download timed out.")
+
+                time.sleep(PROGRESS_INTERVAL)
+
+            # Save final file
+            download.save_as(str(output_path))
+            print(f"✅ Download complete: {output_path.resolve()}")
+
+            # Final screenshot
+            page.screenshot(path=str(SCREENSHOT_DIR / "final_success.png"), full_page=True)
 
         except TimeoutError as e:
-            page.screenshot(path="debug_failure.png", full_page=True)
+            page.screenshot(path=str(SCREENSHOT_DIR / "debug_failure.png"), full_page=True)
             print(f"❌ Timeout: {e}")
-            print("📸 Screenshot saved as debug_failure.png")
+            print(f"📸 Failure screenshot saved in {SCREENSHOT_DIR}")
         finally:
             context.close()
             browser.close()
 
 if __name__ == "__main__":
-    download_valmikinagar_zip(Path(OUTPUT_ZIP))
+    download_zip(Path(OUTPUT_ZIP))
